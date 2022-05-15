@@ -30,8 +30,8 @@ Resources:
         ReadCapacityUnits: 0
         WriteCapacityUnits: 0
       BillingMode: PAY_PER_REQUEST
-      # StreamSpecification:
-      #   StreamViewType: NEW_IMAGE
+      StreamSpecification:
+        StreamViewType: OLD_IMAGE
   StoreTweetsFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
