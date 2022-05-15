@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "StreamProcessorApp-dev"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-o2lylp8guvaf"
+s3_prefix = "StreamProcessorApp-dev"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
+profile = "tarikprivate"
+disable_rollback = true
