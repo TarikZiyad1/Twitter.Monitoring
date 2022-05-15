@@ -1,4 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { TweetV2SingleStreamResult } from 'twitter-api-v2';
 
 /**
  *
@@ -11,23 +12,22 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
  */
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    let response: APIGatewayProxyResult;
     try {
-        response = {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'hello world',
-            }),
-        };
+        const tweet: TweetV2SingleStreamResult = JSON.parse(event.body as string);
+        console.log('🚀 ~ file: storeTweets.ts ~ line 18 ~ lambdaHandler ~ tweet', tweet);
     } catch (err) {
         console.log(err);
-        response = {
+        const response: APIGatewayProxyResult = {
             statusCode: 500,
             body: JSON.stringify({
-                message: 'some error happened',
+                message: JSON.stringify(err),
             }),
         };
     }
 
-    return response;
+    return {
+        statusCode: 200,
+        body: '',
+    };
 };
+console.log('s');
