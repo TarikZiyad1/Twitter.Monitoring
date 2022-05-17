@@ -4,14 +4,126 @@ Description: >
   TwitterMonitoringApp
 
   Sample SAM Template for TwitterMonitoringApp
-  
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+
+Parameters:
+  NotificationEmail:
+    Type: String
+    Default: tareqwaraq4it@gmail.com  
+
 Globals:
   Function:
     Timeout: 10
     Tracing: Active
+    Runtime: nodejs14.x
+    Architectures:
+      - x86_64
 
 Resources:
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Protocol: email
+        Endpoint: !Ref NotificationEmail
+
+  # AnomalyDetectorOnUsedWriteCapacity:
+  #   Type: AWS::CloudWatch::AnomalyDetector
+  #   Properties:
+  #     Namespace: AWS/DynamoDB
+  #     MetricName: ConsumedWriteCapacityUnits #or SuccessfulRequestLatency
+  #     Stat: Average
+  #     Dimensions:
+  #       - Name: TableName
+  #         Value: !Ref TweetsTable
+  #     Configuration:
+  #       MetricTimeZone: UTC
+  #       # ExcludedTimeRanges:
+  #       #   - StartTime: 2019-07-01T00:00:00
+  #       #     EndTime: 2019-07-01T23:59:59
+  
+
+  # Alarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmDescription: "Alarm dlq messages when we have 1 or more failed messages in 1 minutes"
+  #     Namespace: "AWS/DynamoDB"
+  #     MetricName: "ConsumedWriteCapacityUnits"
+  #     Period: 60
+  #     Statistic: Average
+  #     DatapointsToAlarm: 1
+  #     EvaluationPeriods: 1
+  #     Threshold: 1
+  #     ComparisonOperator: GreaterThanOrEqualToThreshold
+  #     AlarmActions:
+  #       - !Ref AlarmTopic
+
+  # DynamoDBInvocationsAnomalyDetector:
+  #   Type: AWS::CloudWatch::AnomalyDetector
+  #   Properties:
+  #     MetricName: ConsumedWriteCapacityUnits
+  #     Namespace: AWS/DynamoDB
+  #     Stat: Average
+  #     Dimensions:
+  #       - Name: TableName
+  #         Value: !Ref TweetsTable
+
+  # DynamoDBConsumedWriteCapacityUnitsAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmDescription: Lambda invocations
+  #     AlarmName: LambdaInvocationsAlarm
+  #     ComparisonOperator: LessThanLowerOrGreaterThanUpperThreshold
+  #     EvaluationPeriods: 1
+  #     Metrics:
+  #     - Expression: ANOMALY_DETECTION_BAND(m1, 2)
+  #       Id: ad1
+  #     - Id: m1
+  #       MetricStat:
+  #         Metric:
+  #           MetricName: ConsumedWriteCapacityUnits
+  #           Namespace: AWS/DynamoDB
+  #         Period: !!int 60
+  #         Stat: Average
+  #     ThresholdMetricId: ad1
+  #     TreatMissingData: breaching
+  #     AlarmActions:
+  #       - !Ref AlarmTopic
+
+  LambdaInvocationsAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Invocations
+      Namespace: AWS/Lambda
+      Stat: Sum
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StoreTweetsFunction
+
+  LambdaInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Lambda invocations
+      AlarmName: LambdaInvocationsAlarm
+      ComparisonOperator: LessThanLowerOrGreaterThanUpperThreshold
+      EvaluationPeriods: 1
+      Metrics:
+      - Expression: ANOMALY_DETECTION_BAND(m1, 0.7)
+        Id: ad1
+      - Id: m1
+        MetricStat:
+          Metric:
+            MetricName: Invocations
+            Namespace: AWS/Lambda
+          Period: !!int 60
+          Stat: Sum
+      ThresholdMetricId: ad1
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+  TweetsArchiveS3Bucket:
+    Type: 'AWS::S3::Bucket'
 
   TweetsTable:
     Type: AWS::DynamoDB::Table
@@ -32,17 +144,18 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       StreamSpecification:
         StreamViewType: OLD_IMAGE
+
   StoreTweetsFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function 
     Properties:
       CodeUri: TwitterMonitoring/
-      Handler: storeTweets.lambdaHandler
-      Runtime: nodejs14.x
-      Architectures:
-        - x86_64
+      Handler: storeTweets.lambdaHandler     
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TweetsTable
       Events:
         StoreTweets:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api 
           Properties:
             Path: /storetweets
             Method: put
@@ -56,19 +169,23 @@ Resources:
         - Handlers/storeTweets/storeTweets.ts
 
   ArchiveTweetsFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function 
     Properties:
       CodeUri: TwitterMonitoring/
-      Handler: archiveTweets.lambdaHandler
-      Runtime: nodejs14.x
-      Architectures:
-        - x86_64
+      Handler: archiveTweets.lambdaHandler     
+      Environment:
+        Variables:
+          TweetsArchiveS3Bucket: !Ref TweetsArchiveS3Bucket
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref TweetsArchiveS3Bucket
       Events:
-        ArchiveTweets:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        Stream:
+          Type: DynamoDB
           Properties:
-            Path: /archivetweets
-            Method: get
+            Stream: !GetAtt TweetsTable.StreamArn
+            BatchSize: 100
+            StartingPosition: TRIM_HORIZON
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:

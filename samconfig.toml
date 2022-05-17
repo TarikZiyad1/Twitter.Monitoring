@@ -9,4 +9,4 @@ region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
 profile = "tarikprivate"
-disable_rollback = true
+disable_rollback = false

@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { TweetV2SingleStreamResult } from 'twitter-api-v2';
+import { putTweet } from '../../DBLayer/GetLastInsertedItemsCount';
 
 /**
  *
@@ -12,17 +13,12 @@ import { TweetV2SingleStreamResult } from 'twitter-api-v2';
  */
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    console.log('🐱‍🏍', JSON.stringify(event, null, 2));
     try {
         const tweet: TweetV2SingleStreamResult = JSON.parse(event.body as string);
-        console.log('🚀 ~ file: storeTweets.ts ~ line 18 ~ lambdaHandler ~ tweet', tweet);
+        putTweet(tweet);
     } catch (err) {
         console.log(err);
-        const response: APIGatewayProxyResult = {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: JSON.stringify(err),
-            }),
-        };
     }
 
     return {
@@ -30,4 +26,3 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         body: '',
     };
 };
-console.log('s');
