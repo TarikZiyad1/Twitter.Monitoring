@@ -2,8 +2,6 @@
 
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI.  
 
-> Note since we used `TypeScript` beta feature for `SAM`, you have to run `sam build --beta-features` when building the app.
-
 To install the latest version of the AWS SAM CLI, refer to the [installation section of the AWS SAM page](https://aws.amazon.com/serverless/sam/).
 
 The application receive Tweeter data from the [Twitter.Streaming application](https://github.com/TarikZiyad1/Twitter.Streaming).
@@ -58,3 +56,6 @@ Monitoring the anomalies in the number of tweets for a certain hashtag will help
 The whole time: 30-35 hours.
 Building the streaming and the storing and archiving the tweets : about 20 hours.
 Building the alert mechanism: about 10 hours.
+
+
+> Note since we used `TypeScript` beta feature for `SAM`, you have to run `sam build --beta-features` when building the app, for more details [see](https://aws.amazon.com/blogs/compute/building-typescript-projects-with-aws-sam-cli/)
