@@ -8,4 +8,3 @@ export function tweet_toDbItem(tweet: TweetV2SingleStreamResult, count: number) 
         ...tweet,
     };
 }
-//TODO change 10 to 100000

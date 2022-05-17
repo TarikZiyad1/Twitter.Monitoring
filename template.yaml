@@ -8,7 +8,8 @@ Description: >
 Parameters:
   NotificationEmail:
     Type: String
-    Default: tareqwaraq4it@gmail.com  
+    Default: email@domain.com  
+    
 
 Globals:
   Function:
@@ -17,110 +18,11 @@ Globals:
     Runtime: nodejs14.x
     Architectures:
       - x86_64
+    Environment:
+        Variables:
+          TableName: !Ref TweetsTable
 
 Resources:
-
-  AlarmTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      Subscription:
-      - Protocol: email
-        Endpoint: !Ref NotificationEmail
-
-  # AnomalyDetectorOnUsedWriteCapacity:
-  #   Type: AWS::CloudWatch::AnomalyDetector
-  #   Properties:
-  #     Namespace: AWS/DynamoDB
-  #     MetricName: ConsumedWriteCapacityUnits #or SuccessfulRequestLatency
-  #     Stat: Average
-  #     Dimensions:
-  #       - Name: TableName
-  #         Value: !Ref TweetsTable
-  #     Configuration:
-  #       MetricTimeZone: UTC
-  #       # ExcludedTimeRanges:
-  #       #   - StartTime: 2019-07-01T00:00:00
-  #       #     EndTime: 2019-07-01T23:59:59
-  
-
-  # Alarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmDescription: "Alarm dlq messages when we have 1 or more failed messages in 1 minutes"
-  #     Namespace: "AWS/DynamoDB"
-  #     MetricName: "ConsumedWriteCapacityUnits"
-  #     Period: 60
-  #     Statistic: Average
-  #     DatapointsToAlarm: 1
-  #     EvaluationPeriods: 1
-  #     Threshold: 1
-  #     ComparisonOperator: GreaterThanOrEqualToThreshold
-  #     AlarmActions:
-  #       - !Ref AlarmTopic
-
-  # DynamoDBInvocationsAnomalyDetector:
-  #   Type: AWS::CloudWatch::AnomalyDetector
-  #   Properties:
-  #     MetricName: ConsumedWriteCapacityUnits
-  #     Namespace: AWS/DynamoDB
-  #     Stat: Average
-  #     Dimensions:
-  #       - Name: TableName
-  #         Value: !Ref TweetsTable
-
-  # DynamoDBConsumedWriteCapacityUnitsAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmDescription: Lambda invocations
-  #     AlarmName: LambdaInvocationsAlarm
-  #     ComparisonOperator: LessThanLowerOrGreaterThanUpperThreshold
-  #     EvaluationPeriods: 1
-  #     Metrics:
-  #     - Expression: ANOMALY_DETECTION_BAND(m1, 2)
-  #       Id: ad1
-  #     - Id: m1
-  #       MetricStat:
-  #         Metric:
-  #           MetricName: ConsumedWriteCapacityUnits
-  #           Namespace: AWS/DynamoDB
-  #         Period: !!int 60
-  #         Stat: Average
-  #     ThresholdMetricId: ad1
-  #     TreatMissingData: breaching
-  #     AlarmActions:
-  #       - !Ref AlarmTopic
-
-  LambdaInvocationsAnomalyDetector:
-    Type: AWS::CloudWatch::AnomalyDetector
-    Properties:
-      MetricName: Invocations
-      Namespace: AWS/Lambda
-      Stat: Sum
-      Dimensions:
-        - Name: FunctionName
-          Value: !Ref StoreTweetsFunction
-
-  LambdaInvocationsAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmDescription: Lambda invocations
-      AlarmName: LambdaInvocationsAlarm
-      ComparisonOperator: LessThanLowerOrGreaterThanUpperThreshold
-      EvaluationPeriods: 1
-      Metrics:
-      - Expression: ANOMALY_DETECTION_BAND(m1, 0.7)
-        Id: ad1
-      - Id: m1
-        MetricStat:
-          Metric:
-            MetricName: Invocations
-            Namespace: AWS/Lambda
-          Period: !!int 60
-          Stat: Sum
-      ThresholdMetricId: ad1
-      TreatMissingData: breaching
-      AlarmActions:
-        - !Ref AlarmTopic
 
   TweetsArchiveS3Bucket:
     Type: 'AWS::S3::Bucket'
@@ -194,17 +96,49 @@ Resources:
         Sourcemap: true
         EntryPoints: 
         - Handlers/archiveTweets/archiveTweets.ts
+  
+  #The anomaly detection part
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Protocol: email
+        Endpoint: !Ref NotificationEmail
+  
+  LambdaInvocationsAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Invocations
+      Namespace: AWS/Lambda
+      Stat: Sum
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StoreTweetsFunction
 
-Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  LambdaInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Lambda invocations
+      AlarmName: LambdaInvocationsAlarm
+      ComparisonOperator: LessThanLowerOrGreaterThanUpperThreshold
+      EvaluationPeriods: 1
+      Metrics:
+      - Expression: ANOMALY_DETECTION_BAND(m1, 0.7)
+        Id: ad1
+      - Id: m1
+        MetricStat:
+          Metric:
+            MetricName: Invocations
+            Namespace: AWS/Lambda
+          Period: !!int 60
+          Stat: Sum
+      ThresholdMetricId: ad1
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+Outputs: 
   StoreTweetsApi:
     Description: "API Gateway endpoint URL for Prod stage for Store Tweets function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/storetweets/"
-  StoreTweetsFunction:
-    Description: "Store Tweets Lambda Function ARN"
-    Value: !GetAtt StoreTweetsFunction.Arn
-  StoreTweetsFunctionIamRole:
-    Description: "Implicit IAM Role created for Store Tweets function"
-    Value: !GetAtt StoreTweetsFunctionRole.Arn
+ 

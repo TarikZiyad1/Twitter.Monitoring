@@ -7,7 +7,8 @@ import { tweet_toDbItem } from './ToDbItem';
 const dynamodb = new DynamoDB.DocumentClient();
 const tableName = process.env.TableName || 'TwitterMonitorApp-dev-TweetsTable-15AUHOL6QJ2YM';
 
-export async function getLastInsertedItemsCount() {
+export async function getLastInsertedItemsCount(): Promise<number> {
+    let count = 0;
     try {
         const params = {
             TableName: tableName,
@@ -19,13 +20,12 @@ export async function getLastInsertedItemsCount() {
 
         const dbResult = await dynamodb.get(params).promise();
         if (dbResult.Item) {
-            const count = (dbResult.Item as LastInsertedItemsCounts).count;
-            return count;
+            count = (dbResult.Item as LastInsertedItemsCounts).count;
         }
     } catch (e) {
         console.log(e);
     }
-    return 0;
+    return count;
 }
 
 export async function incrementCount() {
@@ -46,7 +46,7 @@ export async function incrementCount() {
     }
 }
 
-export async function putTweet(tweet: TweetV2SingleStreamResult) {
+export async function putTweet(tweet: TweetV2SingleStreamResult): Promise<void> {
     try {
         const counter = await getLastInsertedItemsCount();
         const dbItem = tweet_toDbItem(tweet, counter);
@@ -60,8 +60,3 @@ export async function putTweet(tweet: TweetV2SingleStreamResult) {
         console.log(e);
     }
 }
-
-incrementCount().then((r) => console.log(r));
-//TODO return promise<number>
-//TODO extract the table name to env variable
-//TODO rewrite the catches
